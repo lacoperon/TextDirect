@@ -1,6 +1,6 @@
-let keys = require('../config/secrets.js')
-
 'use strict';
+
+let keys = require('../../config/secrets.js');
 /*
  'use strict' is not required but helpful for turning syntactical errors into true errors in the program flow
  https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode
@@ -48,7 +48,7 @@ function parse(req, res) {
 }
 
 function interpret(cmdArr) {
-  var cmdJSON = {"w": [], "d": []};
+  var cmdJSON = {"w": [], "d": [], "b": []};
   cmdArr.forEach(function(cmd) {
     switch (cmd.substring(0,2).toUpperCase()) {
       case 'W-':
@@ -57,11 +57,28 @@ function interpret(cmdArr) {
       case 'D-':
         cmdJSON.d.push(cmd.substring(2).trim())
         break;
+      case 'B-':
+        cmdJSON.b.push(cmd.substring(2).trim())
+        break;
       default:
         console.log('unknown command');
     }
   });
 
+  cmdJSON.b.forEach(function(cmd) {
+    bank(cmd);
+  });
+
   console.log(cmdJSON);
   return "";
+}
+
+function bank(cmd) {
+  var bankCmdArr = cmd.trim().split(" ");
+  switch (bankCmdArr[0]) {
+    case 'bal' :
+      var accountName = bankCmdArr[bankCmdArr.length - 1];
+      console.log(accountName);
+      break;
+  }
 }
