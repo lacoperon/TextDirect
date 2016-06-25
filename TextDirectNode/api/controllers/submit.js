@@ -1,3 +1,5 @@
+let keys = require('../config/secrets.js')
+
 'use strict';
 /*
  'use strict' is not required but helpful for turning syntactical errors into true errors in the program flow
@@ -40,7 +42,7 @@ function parse(req, res) {
     return str != '';
   }).map(function(str) { return str.trim() });
 
-  var cmdJSON = interpret(cmdArr);
+  let cmdJSON = interpret(cmdArr);
   // this sends back a JSON response which is a single string
   res.json(cmdJSON);
 }
