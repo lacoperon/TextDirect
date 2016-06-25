@@ -73,12 +73,25 @@ function interpret(cmdArr) {
   return "";
 }
 
+// Bank function queries CapitalOne's Nessie API, returning account information
+// associated with a user with a particular account ID which they have set up
+// with TextDirect beforehand
+
 function bank(cmd) {
   var bankCmdArr = cmd.trim().split(" ");
+  var bankInfo = {};
   switch (bankCmdArr[0]) {
     case 'bal' :
       var accountName = bankCmdArr[bankCmdArr.length - 1];
       console.log(accountName);
+      var request = require('request');
+      var accountID = '576f0d970733d0184021f516';
+      request(`http://api.reimaginebanking.com/accounts/${accountID}?key=${keys.reimagine_banking_key}`, function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+          bankInfo = JSON.parse(body);
+          console.log(`The balance of ${bankInfo.nickname} is $${bankInfo.balance}`);
+        }
+      });
       break;
   }
 }
