@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
   version: "0.0.1"
-  title: Hello World App
+  title: TextDirect App
 # during dev, should point to your local machine
 host: localhost:10010
 # basePath prefixes all resource paths 
@@ -18,17 +18,17 @@ consumes:
 produces:
   - application/json
 paths:
-  /hello:
+  /submit:
     # binds a127 app logic to a route
-    x-swagger-router-controller: hello_world
+    x-swagger-router-controller: submit
     get:
-      description: Returns 'Hello' to the caller
+      description: Parses message and returns the result
       # used as the method name of the controller
-      operationId: hello
+      operationId: parse
       parameters:
-        - name: name
+        - name: textMsg
           in: query
-          description: The name of the person to whom to say hello
+          description: The received text message
           required: false
           type: string
       responses:
@@ -36,7 +36,7 @@ paths:
           description: Success
           schema:
             # a pointer to a definition
-            $ref: "#/definitions/HelloWorldResponse"
+            $ref: "#/definitions/Response"
         # responses may fall through to errors
         default:
           description: Error
@@ -46,7 +46,7 @@ paths:
     x-swagger-pipe: swagger_raw
 # complex objects have schema definitions
 definitions:
-  HelloWorldResponse:
+  Response:
     required:
       - message
     properties:
