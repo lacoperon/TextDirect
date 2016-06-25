@@ -40,8 +40,9 @@ function parse(req, res) {
     return str != '';
   }).map(function(str) { return str.trim() });
 
+  var cmdJSON = interpret(cmdArr);
   // this sends back a JSON response which is a single string
-  res.json(cmdArr);
+  res.json(cmdJSON);
 }
 
 function interpret(cmdArr) {
@@ -58,4 +59,7 @@ function interpret(cmdArr) {
         console.log('unknown command');
     }
   });
+
+  console.log(cmdJSON);
+  return "";
 }
