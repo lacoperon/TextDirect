@@ -36,10 +36,26 @@ module.exports = {
  */
 function parse(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
-  let msg = req.swagger.params.textMsg.value.trim().split(';').filter(function(str){
+  let cmdArr = req.swagger.params.textMsg.value.trim().split(';').filter(function(str){
     return str != '';
   }).map(function(str) { return str.trim() });
 
   // this sends back a JSON response which is a single string
-  res.json(msg);
+  res.json(cmdArr);
+}
+
+function interpret(cmdArr) {
+  var cmdJSON = {"w": [], "d": []};
+  cmdArr.forEach(function(cmd) {
+    switch (cmd.substring(0,2).toUpperCase()) {
+      case 'W-':
+        cmdJSON.w.push(cmd.substring(2).trim())
+        break;
+      case 'D-':
+        cmdJSON.d.push(cmd.substring(2).trim())
+        break;
+      default:
+        console.log('unknown command');
+    }
+  });
 }
