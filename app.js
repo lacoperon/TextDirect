@@ -24,7 +24,6 @@
 
 var twilio = require('twilio'),
     http = require('http');
-    port = process.env.VCAP_APP_PORT || 10010;
 
 http.createServer(function (req, res) {
     // Create a TwiML response
@@ -45,4 +44,4 @@ http.createServer(function (req, res) {
     });
     res.end(resp.toString());
 
-}).listen(port);
+}).listen(process.env.VCAP_APP_PORT || 10010);
