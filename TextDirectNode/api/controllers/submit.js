@@ -100,8 +100,7 @@ function getDirections(cmd) {
   }
 
   request(
-    'https://maps.googleapis.com/maps/api/directions/json?origin=' + origin +
-    '&destination=' + destination + '&avoid=tolls&key=' + keys.google_maps_key,
+    'https://maps.googleapis.com/maps/api/directions/json?origin=' + origin + '&destination=' + destination + '&avoid=tolls&key=' + keys.google_maps_key,
     function(error, response, body) {
       if (!error && response.statusCode === 200) {
         const route = JSON.parse(body).routes[0].legs[0];
