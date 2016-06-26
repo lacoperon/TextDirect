@@ -51,8 +51,21 @@ function parse(req, res) {
 }
 
 let home; // Replace global variable with database of users.
+let shortcuts = {};
 
-function interpret(cmdArr) {
+function interpret(cmdArr, fromText = true) {
+  if (fromText) {
+    shortcuts.keys.find(function(shortcut) {
+      cmdArr.forEach(function(cmd) {
+        if (cmd.startsWith(shortcut)) {
+          cmd.replace(shortcut, shortcuts.shortcut);
+        }
+      });
+    });
+
+    return interpret(cmdArr, false);
+  }
+
   let cmdJSON = {w: [], d: [], b: []};
 
   cmdArr.forEach(function(cmd) {
@@ -68,6 +81,10 @@ function interpret(cmdArr) {
         break;
       case 'B-':
         cmdJSON.b.push(cmd.substring(2).trim())
+        break;
+      case '@='
+        const shortcut = cmd.substring(2).trim().split('-');
+        objects.`@${shortcut[0]}-` = shortcut[1];
         break;
       default:
         console.log('unknown command');
@@ -99,9 +116,7 @@ function twilio(messageSent) {
       body: messageSent,   
   }, function(err, message) { 
       console.log(message.sid); 
-  }); 
-
-
+  });
 
 // Direction commands get turn-by-turn directions from Google Maps API;
 // "o-" prefix optionally specifies origin address (home address by default)
@@ -127,14 +142,13 @@ function getDirections(cmd) {
         const destination = route.end_address;
         let directions = `${route.distance.text} (${route.duration.text}) from ${route.start_address} to ${destination}\n`;
         directions = route.steps.map(function(step) {
-          return `In ${step.distance.text}: ${step.html_instructions.replace(/<\/?b>/g, '')}`;
+          return `In ${step.distance.text}: ${step.html_instructions.replace(/<\/?(b|div((?!>).)*)>/g, '')}`;
         }).join('\n');
         directions += `\nDestination: ${destination}`;
         console.log(directions);
       }
     }
   );
-
 }
 
 // Bank function queries CapitalOne's Nessie API, returning account information
