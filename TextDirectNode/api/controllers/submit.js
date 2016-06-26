@@ -86,8 +86,8 @@ function interpret(cmdArr) {
 
 //Twilio API integration
 function twilio(messageSent) {
-  var accountSid = 'AC48c3d89ea51e4f0f0406d328c3493118'; 
-  var authToken = 'a9b72418a0183b6b9bbca8731d58fd99'; 
+  var accountSid = ''; 
+  var authToken = ''; 
  
 //require the Twilio module and create a REST client 
   var client = require('twilio')(accountSid, authToken); 
