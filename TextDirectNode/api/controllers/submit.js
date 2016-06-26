@@ -104,7 +104,7 @@ function twilio(messageSent) {
   });
 }
 
-
+//
 
 // Direction commands get turn-by-turn directions from Google Maps API;
 // "o-" prefix optionally specifies origin address (home address by default)
@@ -133,7 +133,7 @@ function getDirections(cmd) {
           return `In ${step.distance.text}: ${step.html_instructions.replace(/<\/?b>/g, '')}`;
         }).join('\n');
         directions += `\nDestination: ${destination}`;
-        console.log(directions);
+        twilio(directions);
       }
     }
   );
