@@ -388,3 +388,107 @@ function addMacroSQL(macro) {
     connection.execSql(request);
   }
 }
+
+~~~ LOCATION SQL TIME ~~~
+
+var locArr = [];
+
+
+// Function to get all of the saved locations associated with a phone number
+function getLocSQL(phoneNumber) {
+
+  var util = require('util');
+  var Connection = require('tedious').Connection;
+  var Request = require('tedious').Request;
+  var TYPES = require('tedious').TYPES;
+
+
+  //Azure Configuration Settings
+  var config = {
+    userName: 'BDNFMaker',
+    password: 'Hello654',
+    server: 'bdnfactorysql.database.windows.net',
+    // When you connect to Azure SQL Database, you need these next options.
+    options: {encrypt: true, database: 'BDNFactory'}
+  };
+  //Creates New Connection to Database
+  var connection = new Connection(config);
+  connection.on('connect', function(err) {
+    if (err) return console.error(err);
+    console.log("SQLRequest to LocDB");
+    executeStatement();
+  });
+
+  //Executes SQL Statement Using Tedious Request
+  //(Phone number is not variable, because twilio doesn't allow for multiple
+  // Numbers in the trial)
+  function executeStatement() {
+    var request = new Request(
+      `SELECT * from dbo.LocData WHERE Number = '${phoneNumber}'`, function(err) {
+      if (err) {
+        console.log(err);
+      }
+    });
+    //Each Row Returned is added to the QueryResult response
+    request.on('row', function(columns) {
+      var locAdd = {};
+      locAdd.number = columns[0].value;
+      locAdd.location = columns[1].value;
+      macroArr.push(macroAdd);
+      // console.log(`MacroArr: ${macroArr}`)
+      // console.log(macroArr);
+      // console.log(macroAdd);
+
+    });
+    //'doneProc' event is fired when the SQL Server is done returning values
+    request.on('doneProc', function() {
+        return macroArr;
+    });
+    connection.execSql(request);
+  }
+}
+
+//Adds location data to the SQL database
+function addLocSQL(locAdd) {
+  console.log(macro);
+  var util = require('util');
+  var Connection = require('tedious').Connection;
+  var Request = require('tedious').Request;
+  var TYPES = require('tedious').TYPES;
+
+  var QueryResult = [];
+
+
+  //Azure Configuration Settings
+  var config = {
+    userName: 'BDNFMaker',
+    password: 'Hello654',
+    server: 'bdnfactorysql.database.windows.net',
+    // When you connect to Azure SQL Database, you need these next options.
+    options: {encrypt: true, database: 'BDNFactory'}
+  };
+  //Creates New Connection to Database
+  var connection = new Connection(config);
+  connection.on('connect', function(err) {
+    if (err) return console.error(err);
+    console.log("SQLRequest to MacroDB");
+    executeStatement();
+  });
+
+  //Executes SQL Statement Using Tedious Request
+  //(Phone number is not variable, because twilio doesn't allow for multiple
+  // Numbers in the trial)
+  function executeStatement() {
+    var request = new Request(
+      `
+      INSERT INTO dbo.LocData
+      VALUES(${locAdd.number},'${locAdd.location}'');
+
+      `, function(err) {
+      if (err) {
+        console.log(err);
+      }
+    });
+    connection.execSql(request);
+  }
+}
