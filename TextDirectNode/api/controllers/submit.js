@@ -129,7 +129,7 @@ function getDirections(cmd) {
         directions = route.steps.map(function(step) {
           return `In ${step.distance.text}: ${step.html_instructions.replace(/<\/?b>/g, '')}`;
         }).join('\n');
-        directions += '\nDestination: ' + destination;
+        directions += `\nDestination: ${destination}`;
         console.log(directions);
       }
     }
