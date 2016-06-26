@@ -73,8 +73,8 @@ function interpret(cmdArr) {
         console.log('unknown command');
     }
   });
-  
-  
+
+
   cmdJSON.d.forEach(function(cmd) { getDirections(cmd) });
 
   cmdJSON.b.forEach(function(cmd) {
@@ -87,19 +87,20 @@ function interpret(cmdArr) {
 
 //Twilio API integration
 function twilio(messageSent) {
-  var accountSid = ''; 
-  var authToken = ''; 
- 
-//require the Twilio module and create a REST client 
-  var client = require('twilio')(accountSid, authToken); 
- 
-  client.messages.create({ 
-      to: "7813331368", 
-      from: "+16174407778", 
-      body: messageSent,   
-  }, function(err, message) { 
-      console.log(message.sid); 
-  }); 
+  var accountSid = keys.twilio_account_sid;
+  var authToken = keys.twilio_auth_token;
+
+//require the Twilio module and create a REST client
+  var client = require('twilio')(accountSid, authToken);
+
+  client.messages.create({
+      to: "7813331368",
+      from: "+16174407778",
+      body: messageSent,
+  }, function(err, message) {
+      console.log(message.sid);
+  });
+}
 
 
 
