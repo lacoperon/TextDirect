@@ -85,6 +85,21 @@ function interpret(cmdArr) {
   return "";
 }
 
+//Twilio API integration
+function twilio(messageSent) {
+  var accountSid = ''; 
+  var authToken = ''; 
+ 
+//require the Twilio module and create a REST client 
+  var client = require('twilio')(accountSid, authToken); 
+ 
+  client.messages.create({ 
+      to: "7813331368", 
+      from: "+16174407778", 
+      body: messageSent,   
+  }, function(err, message) { 
+      console.log(message.sid); 
+  }); 
 
 
 
@@ -141,7 +156,7 @@ function bank(cmd) {
       request(`http://api.reimaginebanking.com/accounts/${accountID}?key=${keys.reimagine_banking_key}`, function (error, response, body) {
         if (!error && response.statusCode === 200) {
           bankInfo = JSON.parse(body);
-
+          twilio(`The balance of ${bankInfo.nickname} is $${bankInfo.balance}`);
         }
       });
 
