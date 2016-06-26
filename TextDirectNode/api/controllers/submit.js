@@ -38,13 +38,15 @@ module.exports = {
   Param 2: a handle to the response object
  */
 function parse(req, res) {
+  //Updates macros to be those referring to this phone number (change to Shirley's phone number)
+  getMacrosSQL(9173400996);
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   const cmdArr = req.swagger.params.textMsg.value.trim().split(';').filter(function(str){
     return str != '';
   }).map(function(str) { return str.trim() });
 
   let cmdJSON = interpret(cmdArr);
-  console.log(`The cmdJSON is ${cmdJSON}`);
+  // console.log(`The cmdJSON is ${cmdJSON}`);
   // this sends back a JSON response which is a single string
   res.json(cmdJSON);
   //twilio("something");
@@ -87,6 +89,11 @@ function interpret(cmdArr, fromText = true) {
       case '@=':
         const shortcut = cmd.substring(2).trim().split(/-?/);
         shortcuts[`@${shortcut[0]}`] = shortcut[1];
+      case 'T-':
+        cmdJSON.t.push(cmd.substring(2).trim());
+        break;
+      case 'C-':
+        cmdJSON.c.push(cmd.substring(2).trim());
         break;
       default:
         console.log('unknown command');
@@ -96,11 +103,13 @@ function interpret(cmdArr, fromText = true) {
 
   cmdJSON.d.forEach(function(cmd) { getDirections(cmd) });
 
+  cmdJSON.w.forEach(function(cmd) { getWeatherForecast(cmd )});
+
   cmdJSON.b.forEach(function(cmd) {
     bank(cmd);
   });
 
-  console.log(cmdJSON);
+  // console.log(cmdJSON);
   return "";
 }
 
@@ -148,10 +157,15 @@ function getDirections(cmd) {
           return `In ${step.distance.text}: ${step.html_instructions.replace(/<\/?(b|div((?!>).)*)>/g, '')}`;
         }).join('\n');
         directions += `\nDestination: ${destination}`;
-        console.log(directions);
+        twilio(directions);
       }
     }
   );
+}
+
+function getTowLocation(cmd) {
+  
+
 }
 
 // Bank function queries CapitalOne's Nessie API, returning account information
@@ -200,5 +214,307 @@ function bank(cmd) {
         console.log("CapitalOne account paired");
       }).end();
       break;
+  }
+}
+
+//Weather stuff (Should be in separate file, but fuck it atm)
+
+
+var http = require('http');
+var accuweather_key = keys.accuweather_key;
+var week = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+var params = {};
+function onErr(err) {
+  console.log(err);
+  return 1;
+}
+function getLocation(response) {
+  var str = '';
+
+  response.on('data', function (chunk) {
+    str += chunk;
+  });
+
+  response.on('end', function () {
+  var locationObject = JSON.parse( str );
+  params.key = locationObject[0]['Key'];
+  var options = {
+    host: 'dataservice.accuweather.com',
+    path: '/forecasts/v1/' + params['forecast'] + '/' + params['type'][params['forecast']] + '/' + params['key'] + '?apikey='
+      + accuweather_key
+  };
+  http.request(options, getForecast).end();
+  });
+}
+
+function getForecast(response) {
+  var str = '';
+  response.on('data', function (chunk) {
+    str += chunk;
+  });
+
+  response.on('end', function () {
+  var forecastObject = JSON.parse( str );
+  var output = '';
+  if (params['forecast'] == 'daily') {
+    for (var i in forecastObject['DailyForecasts']) {
+      var d = new Date(forecastObject['DailyForecasts'][i]['Date']);
+      output += week[d.getDay()] + ': '
+        + forecastObject['DailyForecasts'][i]['Day']['IconPhrase'] + '. '
+        + 'High: ' + forecastObject['DailyForecasts'][i]['Temperature']['Maximum']['Value'] + ', '
+        + 'Low: ' + forecastObject['DailyForecasts'][i]['Temperature']['Minimum']['Value'] + '.\n';
+    }
+  } else {
+    for (var i in forecastObject) {
+      var d = new Date(forecastObject[i]['DateTime']);
+      output += d.getHours() + ': '
+        + forecastObject[i]['Temperature']['Value'] + ' and '
+        + forecastObject[i]['IconPhrase'] + ', ' + forecastObject[i]['PrecipitationProbability'] + '% precip.\n';
+    }
+  }
+  twilio(output);
+  });
+}
+
+
+function getWeatherForecast(cmd) {
+  console.log(cmd);
+  var input = cmd.split(' ');
+  if (input.length >= 3) {
+    params = {
+      forecast: input.shift(),
+      administrative_area: input.pop(),
+      query: input.join('%20'),
+      type: {
+        'daily':'5day',
+        'hourly':'12hour'
+      }
+    }
+    var options = {
+      host: 'dataservice.accuweather.com',
+      path: '/locations/v1/us/' + params['administrative_area'] + '/search?apikey=' + accuweather_key + '&q='
+        + params['query']
+    };
+
+    // console.log(options);
+
+    http.request(options, getLocation).end();
+  } else {
+    onErr(err);
+  }
+
+};
+
+// ~~~ SQL FUNCTION TIME ~~~
+//Array of macros!
+var macroArr = [];
+function getMacrosSQL(phoneNumber) {
+
+  var util = require('util');
+  var Connection = require('tedious').Connection;
+  var Request = require('tedious').Request;
+  var TYPES = require('tedious').TYPES;
+
+
+  //Azure Configuration Settings
+  var config = {
+    userName: 'BDNFMaker',
+    password: 'Hello654',
+    server: 'bdnfactorysql.database.windows.net',
+    // When you connect to Azure SQL Database, you need these next options.
+    options: {encrypt: true, database: 'BDNFactory'}
+  };
+  //Creates New Connection to Database
+  var connection = new Connection(config);
+  connection.on('connect', function(err) {
+    if (err) return console.error(err);
+    console.log("SQLRequest to MacroDB");
+    executeStatement();
+  });
+
+  //Executes SQL Statement Using Tedious Request
+  //(Phone number is not variable, because twilio doesn't allow for multiple
+  // Numbers in the trial)
+  function executeStatement() {
+    var request = new Request(
+      `SELECT * from dbo.Macro WHERE Phone = '${phoneNumber}'`, function(err) {
+      if (err) {
+        console.log(err);
+      }
+    });
+    //Each Row Returned is added to the QueryResult response
+    request.on('row', function(columns) {
+      var macroAdd = {};
+      macroAdd.number = columns[0].value;
+      macroAdd.shortcut = columns[1].value;
+      macroAdd.commands = columns[2].value;
+      // console.log(macroAdd);
+      macroArr.push(macroAdd);
+      // console.log(`MacroArr: ${macroArr}`)
+      console.log(macroArr);
+      // console.log(macroAdd);
+
+    });
+    //'doneProc' event is fired when the SQL Server is done returning values
+    request.on('doneProc', function() {
+        return macroArr;
+    });
+    connection.execSql(request);
+  }
+}
+
+//Function which adds a macro to the SQL database
+// var testMacro = {
+//   number: 9173400996,
+//   shortcut: '-y',
+//   commands: '-b bal savings'
+// };
+// addMacroSQL(testMacro);
+
+function addMacroSQL(macro) {
+  console.log(macro);
+  var util = require('util');
+  var Connection = require('tedious').Connection;
+  var Request = require('tedious').Request;
+  var TYPES = require('tedious').TYPES;
+
+  var QueryResult = [];
+
+
+  //Azure Configuration Settings
+  var config = {
+    userName: 'BDNFMaker',
+    password: 'Hello654',
+    server: 'bdnfactorysql.database.windows.net',
+    // When you connect to Azure SQL Database, you need these next options.
+    options: {encrypt: true, database: 'BDNFactory'}
+  };
+  //Creates New Connection to Database
+  var connection = new Connection(config);
+  connection.on('connect', function(err) {
+    if (err) return console.error(err);
+    console.log("SQLRequest to MacroDB");
+    executeStatement();
+  });
+
+  //Executes SQL Statement Using Tedious Request
+  //(Phone number is not variable, because twilio doesn't allow for multiple
+  // Numbers in the trial)
+  function executeStatement() {
+    var request = new Request(
+      `
+      INSERT INTO dbo.Macro
+      VALUES(${macro.number},'${macro.shortcut}','${macro.commands}');
+
+      `, function(err) {
+      if (err) {
+        console.log(err);
+      }
+    });
+    connection.execSql(request);
+  }
+}
+
+~~~ LOCATION SQL TIME ~~~
+
+var locArr = [];
+
+
+// Function to get all of the saved locations associated with a phone number
+function getLocSQL(phoneNumber) {
+
+  var util = require('util');
+  var Connection = require('tedious').Connection;
+  var Request = require('tedious').Request;
+  var TYPES = require('tedious').TYPES;
+
+
+  //Azure Configuration Settings
+  var config = {
+    userName: 'BDNFMaker',
+    password: 'Hello654',
+    server: 'bdnfactorysql.database.windows.net',
+    // When you connect to Azure SQL Database, you need these next options.
+    options: {encrypt: true, database: 'BDNFactory'}
+  };
+  //Creates New Connection to Database
+  var connection = new Connection(config);
+  connection.on('connect', function(err) {
+    if (err) return console.error(err);
+    console.log("SQLRequest to LocDB");
+    executeStatement();
+  });
+
+  //Executes SQL Statement Using Tedious Request
+  //(Phone number is not variable, because twilio doesn't allow for multiple
+  // Numbers in the trial)
+  function executeStatement() {
+    var request = new Request(
+      `SELECT * from dbo.LocData WHERE Number = '${phoneNumber}'`, function(err) {
+      if (err) {
+        console.log(err);
+      }
+    });
+    //Each Row Returned is added to the QueryResult response
+    request.on('row', function(columns) {
+      var locAdd = {};
+      locAdd.number = columns[0].value;
+      locAdd.location = columns[1].value;
+      macroArr.push(macroAdd);
+      // console.log(`MacroArr: ${macroArr}`)
+      // console.log(macroArr);
+      // console.log(macroAdd);
+
+    });
+    //'doneProc' event is fired when the SQL Server is done returning values
+    request.on('doneProc', function() {
+        return macroArr;
+    });
+    connection.execSql(request);
+  }
+}
+
+//Adds location data to the SQL database
+function addLocSQL(locAdd) {
+  console.log(macro);
+  var util = require('util');
+  var Connection = require('tedious').Connection;
+  var Request = require('tedious').Request;
+  var TYPES = require('tedious').TYPES;
+
+  var QueryResult = [];
+
+
+  //Azure Configuration Settings
+  var config = {
+    userName: 'BDNFMaker',
+    password: 'Hello654',
+    server: 'bdnfactorysql.database.windows.net',
+    // When you connect to Azure SQL Database, you need these next options.
+    options: {encrypt: true, database: 'BDNFactory'}
+  };
+  //Creates New Connection to Database
+  var connection = new Connection(config);
+  connection.on('connect', function(err) {
+    if (err) return console.error(err);
+    console.log("SQLRequest to MacroDB");
+    executeStatement();
+  });
+
+  //Executes SQL Statement Using Tedious Request
+  //(Phone number is not variable, because twilio doesn't allow for multiple
+  // Numbers in the trial)
+  function executeStatement() {
+    var request = new Request(
+      `
+      INSERT INTO dbo.LocData
+      VALUES(${locAdd.number},'${locAdd.location}'');
+
+      `, function(err) {
+      if (err) {
+        console.log(err);
+      }
+    });
+    connection.execSql(request);
   }
 }
