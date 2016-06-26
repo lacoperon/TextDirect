@@ -69,6 +69,8 @@ function interpret(cmdArr) {
       case 'B-':
         cmdJSON.b.push(cmd.substring(2).trim())
         break;
+      case '@=':
+        twilio(`Macro Created for ${cmd.substring(2).trim()}`);
       default:
         console.log('unknown command');
     }
