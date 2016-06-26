@@ -70,7 +70,13 @@ function interpret(cmdArr) {
         cmdJSON.b.push(cmd.substring(2).trim())
         break;
       case '@=':
-        twilio(`Macro Created for ${cmd.substring(2).trim()}`);
+        twilio(`Macro Created for ${cmd.substring(4).trim()}\n\n Bound to ${cmd.substring(2,4)}`);
+        break;
+      case 'R-':
+        bank("bal Savings");
+        getWeatherForecast("daily Boston MA");
+        // Add get geocoords
+
       default:
         console.log('unknown command');
     }
