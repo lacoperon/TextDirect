@@ -47,12 +47,13 @@ function parse(req, res) {
   console.log(`The cmdJSON is ${cmdJSON}`);
   // this sends back a JSON response which is a single string
   res.json(cmdJSON);
+  //twilio("something");
 }
 
 let home; // Replace global variable with database of users.
 
 function interpret(cmdArr) {
-  let cmdJSON = {w: [], d: []};
+  let cmdJSON = {w: [], d: [], b: []};
 
   cmdArr.forEach(function(cmd) {
     switch (cmd.substring(0,2).toUpperCase()) {
@@ -84,21 +85,7 @@ function interpret(cmdArr) {
   return "";
 }
 
-//Twilio API integration
-function twilio(messageSent) {
-  var accountSid = 'AC48c3d89ea51e4f0f0406d328c3493118'; 
-  var authToken = 'a9b72418a0183b6b9bbca8731d58fd99'; 
- 
-//require the Twilio module and create a REST client 
-  var client = require('twilio')(accountSid, authToken); 
- 
-  client.messages.create({ 
-      to: "7813331368", 
-      from: "+16174407778", 
-      body: messageSent,   
-  }, function(err, message) { 
-      console.log(message.sid); 
-  }); 
+
 
 
 // Direction commands get turn-by-turn directions from Google Maps API;
@@ -118,20 +105,21 @@ function getDirections(cmd) {
   }
 
   request(
-    'https://maps.googleapis.com/maps/api/directions/json?origin=' + origin + '&destination=' + destination + '&avoid=tolls&key=' + keys.google_maps_key,
+    `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&avoid=tolls&key=${keys.google_maps_key}`,
     function(error, response, body) {
       if (!error && response.statusCode === 200) {
         const route = JSON.parse(body).routes[0].legs[0];
         const destination = route.end_address;
-        let directions = route.distance.text + ' (' + route.duration.text + ') from ' + route.start_address + ' to ' + destination + '\n';
+        let directions = `${route.distance.text} (${route.duration.text}) from ${route.start_address} to ${destination}\n`;
         directions = route.steps.map(function(step) {
-          return 'In ' + step.distance.text + ': ' + step.html_instructions.replace(/<\/?b>/g, '');
+          return `In ${step.distance.text}: ${step.html_instructions.replace(/<\/?b>/g, '')}`;
         }).join('\n');
         directions += '\nDestination: ' + destination;
         console.log(directions);
       }
     }
   );
+
 }
 
 // Bank function queries CapitalOne's Nessie API, returning account information
@@ -151,9 +139,9 @@ function bank(cmd) {
       var request = require('request');
       var accountID = '576f0d970733d0184021f516';
       request(`http://api.reimaginebanking.com/accounts/${accountID}?key=${keys.reimagine_banking_key}`, function (error, response, body) {
-        if (!error && response.statusCode == 200) {
+        if (!error && response.statusCode === 200) {
           bankInfo = JSON.parse(body);
-          twilio(`The balance of ${bankInfo.nickname} is $${bankInfo.balance}`);
+
         }
       });
 
