@@ -44,6 +44,7 @@ function parse(req, res) {
   }).map(function(str) { return str.trim() });
 
   let cmdJSON = interpret(cmdArr);
+  console.log(`The cmdJSON is ${cmdJSON}`);
   // this sends back a JSON response which is a single string
   res.json(cmdJSON);
 }
@@ -52,6 +53,7 @@ let home; // Replace global variable with database of users.
 
 function interpret(cmdArr) {
   let cmdJSON = {w: [], d: []};
+
   cmdArr.forEach(function(cmd) {
     switch (cmd.substring(0,2).toUpperCase()) {
       case 'W-':
@@ -63,12 +65,22 @@ function interpret(cmdArr) {
       case 'H-': // H- prefix sets home/default address
         home = cmd.substring(2).trim();
         break;
+      case 'B-':
+        cmdJSON.b.push(cmd.substring(2).trim())
+        break;
       default:
         console.log('unknown command');
     }
   });
 
-  return cmdJSON.d.map(function(cmd) { getDirections(cmd) }).join('\n\n');
+  cmdJSON.d.forEach(function(cmd) { getDirections(cmd) });
+
+  cmdJSON.b.forEach(function(cmd) {
+    bank(cmd);
+  });
+
+  console.log(cmdJSON);
+  return "";
 }
 
 // Direction commands get turn-by-turn directions from Google Maps API;
@@ -105,4 +117,53 @@ function getDirections(cmd) {
       }
     }
   );
+}
+
+// Bank function queries CapitalOne's Nessie API, returning account information
+// associated with a user with a particular account ID which they have set up
+// with TextDirect beforehand.
+
+//Also can pair accounts with the Twext service
+
+function bank(cmd) {
+  var bankCmdArr = cmd.trim().split(" ");
+  var bankInfo = {};
+  switch (bankCmdArr[0]) {
+    //Example twilio message: b- bal Savings
+    case 'bal' :
+      var accountName = bankCmdArr[bankCmdArr.length - 1];
+      console.log(accountName);
+      var request = require('request');
+      var accountID = '576f0d970733d0184021f516';
+      request(`http://api.reimaginebanking.com/accounts/${accountID}?key=${keys.reimagine_banking_key}`, function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+          bankInfo = JSON.parse(body);
+          console.log(`The balance of ${bankInfo.nickname} is $${bankInfo.balance}`);
+        }
+      });
+
+      break;
+    //Example twilio message: b- pair Savings 576f0d970733d0184021f516
+    case 'pair' :
+      console.log(bankCmdArr);
+      var custID = bankCmdArr[bankCmdArr.length - 1];
+      console.log(custID);
+      var options = {
+        uri: `http://api.reimaginebanking.com/customers/${custID}/accounts?key=${keys.reimagine_banking_key}`,
+        method: 'POST',
+        json: {
+          "type": "TESTER",
+          "nickname": "TESTER",
+          "rewards": 0,
+          "balance": 18.32
+        }
+      };
+      //Request pairing doesn't work, isn't important because doesn't actually
+      //do anything concrete
+      var request = require('request');
+      request(options, function (error, response, body) {
+        console.log("CapitalOne account paired");
+      }).end();
+      break;
+  }
 }

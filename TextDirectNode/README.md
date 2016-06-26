@@ -1,1 +1,1 @@
-# Skeleton project for Swagger
+# Node Component of TextDirect
