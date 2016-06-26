@@ -77,12 +77,15 @@ function interpret(cmdArr) {
 
 // Bank function queries CapitalOne's Nessie API, returning account information
 // associated with a user with a particular account ID which they have set up
-// with TextDirect beforehand
+// with TextDirect beforehand.
+
+//Also can pair accounts with the Twext service
 
 function bank(cmd) {
   var bankCmdArr = cmd.trim().split(" ");
   var bankInfo = {};
   switch (bankCmdArr[0]) {
+    //Example twilio message: b- bal Savings
     case 'bal' :
       var accountName = bankCmdArr[bankCmdArr.length - 1];
       console.log(accountName);
@@ -94,9 +97,13 @@ function bank(cmd) {
           console.log(`The balance of ${bankInfo.nickname} is $${bankInfo.balance}`);
         }
       });
+
       break;
+    //Example twilio message: b- pair Savings 576f0d970733d0184021f516
     case 'pair' :
+      console.log(bankCmdArr);
       var custID = bankCmdArr[bankCmdArr.length - 1];
+      console.log(custID);
       var options = {
         uri: `http://api.reimaginebanking.com/customers/${custID}/accounts?key=${keys.reimagine_banking_key}`,
         method: 'POST',
@@ -107,7 +114,12 @@ function bank(cmd) {
           "balance": 18.32
         }
       };
+      //Request pairing doesn't work, isn't important because doesn't actually
+      //do anything concrete
+      var request = require('request');
+      request(options, function (error, response, body) {
+        console.log("CapitalOne account paired");
+      }).end();
       break;
-
   }
 }
