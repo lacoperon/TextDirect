@@ -38,13 +38,15 @@ module.exports = {
   Param 2: a handle to the response object
  */
 function parse(req, res) {
+  //Updates macros to be those referring to this phone number (change to Shirley's phone number)
+  getMacrosSQL(9173400996);
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   const cmdArr = req.swagger.params.textMsg.value.trim().split(';').filter(function(str){
     return str != '';
   }).map(function(str) { return str.trim() });
 
   let cmdJSON = interpret(cmdArr);
-  console.log(`The cmdJSON is ${cmdJSON}`);
+  // console.log(`The cmdJSON is ${cmdJSON}`);
   // this sends back a JSON response which is a single string
   res.json(cmdJSON);
   //twilio("something");
@@ -83,7 +85,7 @@ function interpret(cmdArr) {
     bank(cmd);
   });
 
-  console.log(cmdJSON);
+  // console.log(cmdJSON);
   return "";
 }
 
@@ -212,9 +214,9 @@ function getLocation(response) {
   params.key = locationObject[0]['Key'];
   var options = {
     host: 'dataservice.accuweather.com',
-    path: '/forecasts/v1/' + params['forecast'] + '/' + params['type'][params['forecast']] + '/' + params['key'] + '?apikey=' 
+    path: '/forecasts/v1/' + params['forecast'] + '/' + params['type'][params['forecast']] + '/' + params['key'] + '?apikey='
       + accuweather_key
-  };  
+  };
   http.request(options, getForecast).end();
   });
 }
@@ -231,7 +233,7 @@ function getForecast(response) {
   if (params['forecast'] == 'daily') {
     for (var i in forecastObject['DailyForecasts']) {
       var d = new Date(forecastObject['DailyForecasts'][i]['Date']);
-      output += week[d.getDay()] + ': ' 
+      output += week[d.getDay()] + ': '
         + forecastObject['DailyForecasts'][i]['Day']['IconPhrase'] + '. '
         + 'High: ' + forecastObject['DailyForecasts'][i]['Temperature']['Maximum']['Value'] + ', '
         + 'Low: ' + forecastObject['DailyForecasts'][i]['Temperature']['Minimum']['Value'] + '.\n';
@@ -239,8 +241,8 @@ function getForecast(response) {
   } else {
     for (var i in forecastObject) {
       var d = new Date(forecastObject[i]['DateTime']);
-      output += d.getHours() + ': ' 
-        + forecastObject[i]['Temperature']['Value'] + ' and ' 
+      output += d.getHours() + ': '
+        + forecastObject[i]['Temperature']['Value'] + ' and '
         + forecastObject[i]['IconPhrase'] + ', ' + forecastObject[i]['PrecipitationProbability'] + '% precip.\n';
     }
   }
@@ -260,11 +262,11 @@ function getWeatherForecast(cmd) {
       type: {
         'daily':'5day',
         'hourly':'12hour'
-      }   
+      }
     }
     var options = {
       host: 'dataservice.accuweather.com',
-      path: '/locations/v1/us/' + params['administrative_area'] + '/search?apikey=' + accuweather_key + '&q=' 
+      path: '/locations/v1/us/' + params['administrative_area'] + '/search?apikey=' + accuweather_key + '&q='
         + params['query']
     };
 
@@ -277,5 +279,112 @@ function getWeatherForecast(cmd) {
 
 };
 
+// ~~~ SQL FUNCTION TIME ~~~
+//Array of macros!
+var macroArr = [];
+function getMacrosSQL(phoneNumber) {
+
+  var util = require('util');
+  var Connection = require('tedious').Connection;
+  var Request = require('tedious').Request;
+  var TYPES = require('tedious').TYPES;
 
 
+  //Azure Configuration Settings
+  var config = {
+    userName: 'BDNFMaker',
+    password: 'Hello654',
+    server: 'bdnfactorysql.database.windows.net',
+    // When you connect to Azure SQL Database, you need these next options.
+    options: {encrypt: true, database: 'BDNFactory'}
+  };
+  //Creates New Connection to Database
+  var connection = new Connection(config);
+  connection.on('connect', function(err) {
+    if (err) return console.error(err);
+    console.log("SQLRequest to MacroDB");
+    executeStatement();
+  });
+
+  //Executes SQL Statement Using Tedious Request
+  //(Phone number is not variable, because twilio doesn't allow for multiple
+  // Numbers in the trial)
+  function executeStatement() {
+    var request = new Request(
+      `SELECT * from dbo.Macro WHERE Phone = '${phoneNumber}'`, function(err) {
+      if (err) {
+        console.log(err);
+      }
+    });
+    //Each Row Returned is added to the QueryResult response
+    request.on('row', function(columns) {
+      var macroAdd = {};
+      macroAdd.number = columns[0].value;
+      macroAdd.shortcut = columns[1].value;
+      macroAdd.commands = columns[2].value;
+      // console.log(macroAdd);
+      macroArr.push(macroAdd);
+      // console.log(`MacroArr: ${macroArr}`)
+      console.log(macroArr);
+      // console.log(macroAdd);
+
+    });
+    //'doneProc' event is fired when the SQL Server is done returning values
+    request.on('doneProc', function() {
+        return macroArr;
+    });
+    connection.execSql(request);
+  }
+}
+
+//Function which adds a macro to the SQL database
+// var testMacro = {
+//   number: 9173400996,
+//   shortcut: '-y',
+//   commands: '-b bal savings'
+// };
+// addMacroSQL(testMacro);
+
+function addMacroSQL(macro) {
+  console.log(macro);
+  var util = require('util');
+  var Connection = require('tedious').Connection;
+  var Request = require('tedious').Request;
+  var TYPES = require('tedious').TYPES;
+
+  var QueryResult = [];
+
+
+  //Azure Configuration Settings
+  var config = {
+    userName: 'BDNFMaker',
+    password: 'Hello654',
+    server: 'bdnfactorysql.database.windows.net',
+    // When you connect to Azure SQL Database, you need these next options.
+    options: {encrypt: true, database: 'BDNFactory'}
+  };
+  //Creates New Connection to Database
+  var connection = new Connection(config);
+  connection.on('connect', function(err) {
+    if (err) return console.error(err);
+    console.log("SQLRequest to MacroDB");
+    executeStatement();
+  });
+
+  //Executes SQL Statement Using Tedious Request
+  //(Phone number is not variable, because twilio doesn't allow for multiple
+  // Numbers in the trial)
+  function executeStatement() {
+    var request = new Request(
+      `
+      INSERT INTO dbo.Macro
+      VALUES(${macro.number},'${macro.shortcut}','${macro.commands}');
+
+      `, function(err) {
+      if (err) {
+        console.log(err);
+      }
+    });
+    connection.execSql(request);
+  }
+}

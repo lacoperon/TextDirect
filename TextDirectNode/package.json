@@ -11,6 +11,7 @@
     "express": "^4.12.3",
     "request": "^2.72.0",
     "swagger-express-mw": "^0.1.0",
+    "tedious": "^1.14.0",
     "twilio": "^2.9.1"
   },
   "devDependencies": {
