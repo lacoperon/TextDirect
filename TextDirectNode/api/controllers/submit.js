@@ -69,6 +69,12 @@ function interpret(cmdArr) {
       case 'B-':
         cmdJSON.b.push(cmd.substring(2).trim())
         break;
+      case 'T-':
+        cmdJSON.t.push(cmd.substring(2).trim())
+        break;
+      case 'C-':
+        cmdJSON.c.push(cmd.substring(2).trim())
+        break;
       default:
         console.log('unknown command');
     }
@@ -137,6 +143,11 @@ function getDirections(cmd) {
       }
     }
   );
+
+}
+
+function getTowLocation(cmd) {
+  
 
 }
 
