@@ -53,8 +53,23 @@ function parse(req, res) {
 }
 
 let home; // Replace global variable with database of users.
+let shortcuts = {};
 
-function interpret(cmdArr) {
+function interpret(cmdArr, fromText = true) {
+  const shortcutKeys = shortcuts.keys;
+
+  if (fromText && shortcutKeys) {
+    shortcutKeys.find(function(shortcut) {
+      cmdArr.forEach(function(cmd) {
+        if (cmd.startsWith(shortcut)) {
+          cmd.replace(shortcut, shortcuts.shortcut);
+        }
+      });
+    });
+
+    return interpret(cmdArr, false);
+  }
+
   let cmdJSON = {w: [], d: [], b: []};
 
   cmdArr.forEach(function(cmd) {
@@ -71,11 +86,14 @@ function interpret(cmdArr) {
       case 'B-':
         cmdJSON.b.push(cmd.substring(2).trim())
         break;
+      case '@=':
+        const shortcut = cmd.substring(2).trim().split(/-?/);
+        shortcuts[`@${shortcut[0]}`] = shortcut[1];
       case 'T-':
-        cmdJSON.t.push(cmd.substring(2).trim())
+        cmdJSON.t.push(cmd.substring(2).trim());
         break;
       case 'C-':
-        cmdJSON.c.push(cmd.substring(2).trim())
+        cmdJSON.c.push(cmd.substring(2).trim());
         break;
       default:
         console.log('unknown command');
@@ -112,8 +130,6 @@ function twilio(messageSent) {
   });
 }
 
-//
-
 // Direction commands get turn-by-turn directions from Google Maps API;
 // "o-" prefix optionally specifies origin address (home address by default)
 // "d-" prefix optionally specifies destination address (by default, the command minus any beginning address strings)
@@ -138,14 +154,13 @@ function getDirections(cmd) {
         const destination = route.end_address;
         let directions = `${route.distance.text} (${route.duration.text}) from ${route.start_address} to ${destination}\n`;
         directions = route.steps.map(function(step) {
-          return `In ${step.distance.text}: ${step.html_instructions.replace(/<\/?b>/g, '')}`;
+          return `In ${step.distance.text}: ${step.html_instructions.replace(/<\/?(b|div((?!>).)*)>/g, '')}`;
         }).join('\n');
         directions += `\nDestination: ${destination}`;
         twilio(directions);
       }
     }
   );
-
 }
 
 function getTowLocation(cmd) {
