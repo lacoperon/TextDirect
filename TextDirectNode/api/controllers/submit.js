@@ -53,7 +53,7 @@ function parse(req, res) {
 let home; // Replace global variable with database of users.
 
 function interpret(cmdArr) {
-  let cmdJSON = {w: [], d: []};
+  let cmdJSON = {w: [], d: [], b: []};
 
   cmdArr.forEach(function(cmd) {
     switch (cmd.substring(0,2).toUpperCase()) {
@@ -73,7 +73,8 @@ function interpret(cmdArr) {
         console.log('unknown command');
     }
   });
-
+  
+  
   cmdJSON.d.forEach(function(cmd) { getDirections(cmd) });
 
   cmdJSON.b.forEach(function(cmd) {
@@ -83,6 +84,7 @@ function interpret(cmdArr) {
   console.log(cmdJSON);
   return "";
 }
+
 
 
 
@@ -103,14 +105,14 @@ function getDirections(cmd) {
   }
 
   request(
-    'https://maps.googleapis.com/maps/api/directions/json?origin=' + origin + '&destination=' + destination + '&avoid=tolls&key=' + keys.google_maps_key,
+    `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&avoid=tolls&key=${keys.google_maps_key}`,
     function(error, response, body) {
       if (!error && response.statusCode === 200) {
         const route = JSON.parse(body).routes[0].legs[0];
         const destination = route.end_address;
-        let directions = route.distance.text + ' (' + route.duration.text + ') from ' + route.start_address + ' to ' + destination + '\n';
+        let directions = `${route.distance.text} (${route.duration.text}) from ${route.start_address} to ${destination}\n`;
         directions = route.steps.map(function(step) {
-          return 'In ' + step.distance.text + ': ' + step.html_instructions.replace(/<\/?b>/g, '');
+          return `In ${step.distance.text}: ${step.html_instructions.replace(/<\/?b>/g, '')}`;
         }).join('\n');
         directions += '\nDestination: ' + destination;
         console.log(directions);
@@ -137,9 +139,9 @@ function bank(cmd) {
       var request = require('request');
       var accountID = '576f0d970733d0184021f516';
       request(`http://api.reimaginebanking.com/accounts/${accountID}?key=${keys.reimagine_banking_key}`, function (error, response, body) {
-        if (!error && response.statusCode == 200) {
+        if (!error && response.statusCode === 200) {
           bankInfo = JSON.parse(body);
-          
+
         }
       });
 
