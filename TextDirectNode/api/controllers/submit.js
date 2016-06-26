@@ -38,11 +38,13 @@ module.exports = {
  */
 function parse(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
+
   let cmdArr = req.swagger.params.textMsg.value.trim().split(';').filter(function(str){
     return str != '';
   }).map(function(str) { return str.trim() });
 
   let cmdJSON = interpret(cmdArr);
+  console.log(`The cmdJSON is ${cmdJSON}`);
   // this sends back a JSON response which is a single string
   res.json(cmdJSON);
 }
@@ -93,5 +95,19 @@ function bank(cmd) {
         }
       });
       break;
+    case 'pair' :
+      var custID = bankCmdArr[bankCmdArr.length - 1];
+      var options = {
+        uri: `http://api.reimaginebanking.com/customers/${custID}/accounts?key=${keys.reimagine_banking_key}`,
+        method: 'POST',
+        json: {
+          "type": "TESTER",
+          "nickname": "TESTER",
+          "rewards": 0,
+          "balance": 18.32
+        }
+      };
+      break;
+
   }
 }
