@@ -183,7 +183,7 @@ function bank(cmd) {
       //do anything concrete
       var request = require('request');
       request(options, function (error, response, body) {
-        console.log("CapitalOne account paired");
+        twilio("CapitalOne account paired");
       }).end();
       break;
   }
@@ -212,9 +212,9 @@ function getLocation(response) {
   params.key = locationObject[0]['Key'];
   var options = {
     host: 'dataservice.accuweather.com',
-    path: '/forecasts/v1/' + params['forecast'] + '/' + params['type'][params['forecast']] + '/' + params['key'] + '?apikey=' 
+    path: '/forecasts/v1/' + params['forecast'] + '/' + params['type'][params['forecast']] + '/' + params['key'] + '?apikey='
       + accuweather_key
-  };  
+  };
   http.request(options, getForecast).end();
   });
 }
@@ -231,7 +231,7 @@ function getForecast(response) {
   if (params['forecast'] == 'daily') {
     for (var i in forecastObject['DailyForecasts']) {
       var d = new Date(forecastObject['DailyForecasts'][i]['Date']);
-      output += week[d.getDay()] + ': ' 
+      output += week[d.getDay()] + ': '
         + forecastObject['DailyForecasts'][i]['Day']['IconPhrase'] + '. '
         + 'High: ' + forecastObject['DailyForecasts'][i]['Temperature']['Maximum']['Value'] + ', '
         + 'Low: ' + forecastObject['DailyForecasts'][i]['Temperature']['Minimum']['Value'] + '.\n';
@@ -239,8 +239,8 @@ function getForecast(response) {
   } else {
     for (var i in forecastObject) {
       var d = new Date(forecastObject[i]['DateTime']);
-      output += d.getHours() + ': ' 
-        + forecastObject[i]['Temperature']['Value'] + ' and ' 
+      output += d.getHours() + ': '
+        + forecastObject[i]['Temperature']['Value'] + ' and '
         + forecastObject[i]['IconPhrase'] + ', ' + forecastObject[i]['PrecipitationProbability'] + '% precip.\n';
     }
   }
@@ -260,11 +260,11 @@ function getWeatherForecast(cmd) {
       type: {
         'daily':'5day',
         'hourly':'12hour'
-      }   
+      }
     }
     var options = {
       host: 'dataservice.accuweather.com',
-      path: '/locations/v1/us/' + params['administrative_area'] + '/search?apikey=' + accuweather_key + '&q=' 
+      path: '/locations/v1/us/' + params['administrative_area'] + '/search?apikey=' + accuweather_key + '&q='
         + params['query']
     };
 
@@ -276,6 +276,3 @@ function getWeatherForecast(cmd) {
   }
 
 };
-
-
-
