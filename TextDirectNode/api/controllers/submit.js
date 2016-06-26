@@ -45,6 +45,7 @@ function parse(req, res) {
   let cmdJSON = interpret(cmdArr);
   // this sends back a JSON response which is a single string
   res.json(cmdJSON);
+  //twilio("something");
 }
 
 function interpret(cmdArr) {
@@ -73,6 +74,22 @@ function interpret(cmdArr) {
   return "";
 }
 
+function twilio(messageSent) {
+  var accountSid = 'AC48c3d89ea51e4f0f0406d328c3493118'; 
+  var authToken = 'a9b72418a0183b6b9bbca8731d58fd99'; 
+ 
+//require the Twilio module and create a REST client 
+  var client = require('twilio')(accountSid, authToken); 
+ 
+  client.messages.create({ 
+      to: "7813331368", 
+      from: "+16174407778", 
+      body: messageSent,   
+  }, function(err, message) { 
+      console.log(message.sid); 
+  }); 
+}
+
 // Bank function queries CapitalOne's Nessie API, returning account information
 // associated with a user with a particular account ID which they have set up
 // with TextDirect beforehand
@@ -89,7 +106,7 @@ function bank(cmd) {
       request(`http://api.reimaginebanking.com/accounts/${accountID}?key=${keys.reimagine_banking_key}`, function (error, response, body) {
         if (!error && response.statusCode == 200) {
           bankInfo = JSON.parse(body);
-          console.log(`The balance of ${bankInfo.nickname} is $${bankInfo.balance}`);
+          twilio(`The balance of ${bankInfo.nickname} is $${bankInfo.balance}`);
         }
       });
       break;
