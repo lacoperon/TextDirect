@@ -1,6 +1,7 @@
-let keys = require('../config/secrets.js')
-
 'use strict';
+
+const keys = require('../../config/secrets');
+const request = require('request');
 /*
  'use strict' is not required but helpful for turning syntactical errors into true errors in the program flow
  https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode
@@ -12,7 +13,7 @@ let keys = require('../config/secrets.js')
 
   It is a good idea to list the modules that your application depends on in the package.json in the project root
  */
-var util = require('util');
+const util = require('util');
 
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
@@ -38,7 +39,7 @@ module.exports = {
  */
 function parse(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
-  let cmdArr = req.swagger.params.textMsg.value.trim().split(';').filter(function(str){
+  const cmdArr = req.swagger.params.textMsg.value.trim().split(';').filter(function(str){
     return str != '';
   }).map(function(str) { return str.trim() });
 
@@ -47,21 +48,52 @@ function parse(req, res) {
   res.json(cmdJSON);
 }
 
+let home; // Replace global variable with database of users.
+
 function interpret(cmdArr) {
-  var cmdJSON = {"w": [], "d": []};
+  let cmdJSON = {w: [], d: []};
   cmdArr.forEach(function(cmd) {
     switch (cmd.substring(0,2).toUpperCase()) {
       case 'W-':
-        cmdJSON.w.push(cmd.substring(2).trim())
+        cmdJSON.w.push(cmd.substring(2).trim());
         break;
       case 'D-':
-        cmdJSON.d.push(cmd.substring(2).trim())
+        cmdJSON.d.push(cmd.substring(2).trim());
+        break;
+      case 'H-': // H- prefix sets home/default address
+        home = cmd.substring(2).trim();
         break;
       default:
         console.log('unknown command');
     }
   });
 
-  console.log(cmdJSON);
-  return "";
+  return cmdJSON.d.map(function(cmd) { getDirections(cmd) }).join('\n\n');
+}
+
+// Direction commands get turn-by-turn directions from Google Maps API;
+// "b-" prefix optionally specifies beginning address (home address by default)
+// "e-" prefix optionally specifies end address (by default, the command minus any beginning address strings)
+function getDirections(cmd) {
+  const matchedOrigin = cmd.match(/b-((?!e-).)*/im);
+
+  if (matchedOrigin) {
+    var origin = matchedOrigin[0].substring(2);
+    var matchedDestination = cmd.match(/e-((?!b-).)*/im);
+    var destination = matchedDestination ? matchedDestination[0].substring(2) : cmd.replace(origin, '');
+  } else {
+    var origin = home;
+    var matchedDestination = cmd.match(/e-((?!b-).)*/im);
+    var destination = matchedDestination ? matchedDestination[0].substring(2) : cmd;
+  }
+
+  request(
+    'https://maps.googleapis.com/maps/api/directions/json?origin=' +
+    origin + '&destination=' + destination + '&key=' + keys.google_maps_key,
+    function(error, response, body) {
+      if (!error && response.statusCode == 200) {
+        console.log(body);
+      }
+    }
+  );
 }
