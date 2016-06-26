@@ -88,11 +88,20 @@ function getDirections(cmd) {
   }
 
   request(
-    'https://maps.googleapis.com/maps/api/directions/json?origin=' +
-    origin + '&destination=' + destination + '&key=' + keys.google_maps_key,
+    'https://maps.googleapis.com/maps/api/directions/json?origin=' + origin +
+    '&destination=' + destination + '&avoid=tolls&key=' + keys.google_maps_key,
     function(error, response, body) {
-      if (!error && response.statusCode == 200) {
-        console.log(body);
+      if (!error && response.statusCode === 200) {
+        const route = JSON.parse(body).routes[0].legs[0];
+        const destination = route.end_address;
+        let directions = (route.distance.text + ' (' + route.duration.text +
+          ') from ' + route.start_address + ' to ' + destination + '\n');
+        directions = route.steps.map(function(step) {
+          return ('In ' + step.distance.text + ': ' +
+            step.html_instructions.replace(/<\/?b>/g, ''));
+        }).join('\n');
+        directions += '\nDestination: ' + destination;
+        console.log(directions);
       }
     }
   );
