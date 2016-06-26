@@ -1,2 +1,1 @@
-# TextDirect
-Texts to Information!
+# Node Component of TextDirect
