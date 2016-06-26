@@ -1,6 +1,7 @@
 'use strict';
 
-let keys = require('../../config/secrets.js');
+const keys = require('../../config/secrets');
+const request = require('request');
 /*
  'use strict' is not required but helpful for turning syntactical errors into true errors in the program flow
  https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode
@@ -12,7 +13,7 @@ let keys = require('../../config/secrets.js');
 
   It is a good idea to list the modules that your application depends on in the package.json in the project root
  */
-var util = require('util');
+const util = require('util');
 
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
@@ -38,25 +39,32 @@ module.exports = {
  */
 function parse(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
-  let cmdArr = req.swagger.params.textMsg.value.trim().split(';').filter(function(str){
+  const cmdArr = req.swagger.params.textMsg.value.trim().split(';').filter(function(str){
     return str != '';
   }).map(function(str) { return str.trim() });
 
   let cmdJSON = interpret(cmdArr);
+  console.log(`The cmdJSON is ${cmdJSON}`);
   // this sends back a JSON response which is a single string
   res.json(cmdJSON);
   //twilio("something");
 }
 
+let home; // Replace global variable with database of users.
+
 function interpret(cmdArr) {
-  var cmdJSON = {"w": [], "d": [], "b": []};
+  let cmdJSON = {w: [], d: []};
+
   cmdArr.forEach(function(cmd) {
     switch (cmd.substring(0,2).toUpperCase()) {
       case 'W-':
-        cmdJSON.w.push(cmd.substring(2).trim())
+        cmdJSON.w.push(cmd.substring(2).trim());
         break;
-      case 'D-':
-        cmdJSON.d.push(cmd.substring(2).trim())
+      case 'N-':
+        cmdJSON.d.push(cmd.substring(2).trim());
+        break;
+      case 'H-': // H- prefix sets home/default address
+        home = cmd.substring(2).trim();
         break;
       case 'B-':
         cmdJSON.b.push(cmd.substring(2).trim())
@@ -66,6 +74,8 @@ function interpret(cmdArr) {
     }
   });
 
+  cmdJSON.d.forEach(function(cmd) { getDirections(cmd) });
+
   cmdJSON.b.forEach(function(cmd) {
     bank(cmd);
   });
@@ -74,30 +84,53 @@ function interpret(cmdArr) {
   return "";
 }
 
-function twilio(messageSent) {
-  var accountSid = 'AC48c3d89ea51e4f0f0406d328c3493118'; 
-  var authToken = 'a9b72418a0183b6b9bbca8731d58fd99'; 
- 
-//require the Twilio module and create a REST client 
-  var client = require('twilio')(accountSid, authToken); 
- 
-  client.messages.create({ 
-      to: "7813331368", 
-      from: "+16174407778", 
-      body: messageSent,   
-  }, function(err, message) { 
-      console.log(message.sid); 
-  }); 
+
+
+// Direction commands get turn-by-turn directions from Google Maps API;
+// "o-" prefix optionally specifies origin address (home address by default)
+// "d-" prefix optionally specifies destination address (by default, the command minus any beginning address strings)
+function getDirections(cmd) {
+  const matchedOrigin = cmd.match(/o-((?!d-).)*/im);
+
+  if (matchedOrigin) {
+    var origin = matchedOrigin[0].substring(2);
+    var matchedDestination = cmd.match(/d-((?!o-).)*/im);
+    var destination = matchedDestination ? matchedDestination[0].substring(2) : cmd.replace(origin, '');
+  } else {
+    var origin = home;
+    var matchedDestination = cmd.match(/d-((?!o-).)*/im);
+    var destination = matchedDestination ? matchedDestination[0].substring(2) : cmd;
+  }
+
+  request(
+    'https://maps.googleapis.com/maps/api/directions/json?origin=' + origin + '&destination=' + destination + '&avoid=tolls&key=' + keys.google_maps_key,
+    function(error, response, body) {
+      if (!error && response.statusCode === 200) {
+        const route = JSON.parse(body).routes[0].legs[0];
+        const destination = route.end_address;
+        let directions = route.distance.text + ' (' + route.duration.text + ') from ' + route.start_address + ' to ' + destination + '\n';
+        directions = route.steps.map(function(step) {
+          return 'In ' + step.distance.text + ': ' + step.html_instructions.replace(/<\/?b>/g, '');
+        }).join('\n');
+        directions += '\nDestination: ' + destination;
+        console.log(directions);
+      }
+    }
+  );
+
 }
 
 // Bank function queries CapitalOne's Nessie API, returning account information
 // associated with a user with a particular account ID which they have set up
-// with TextDirect beforehand
+// with TextDirect beforehand.
+
+//Also can pair accounts with the Twext service
 
 function bank(cmd) {
   var bankCmdArr = cmd.trim().split(" ");
   var bankInfo = {};
   switch (bankCmdArr[0]) {
+    //Example twilio message: b- bal Savings
     case 'bal' :
       var accountName = bankCmdArr[bankCmdArr.length - 1];
       console.log(accountName);
@@ -106,9 +139,32 @@ function bank(cmd) {
       request(`http://api.reimaginebanking.com/accounts/${accountID}?key=${keys.reimagine_banking_key}`, function (error, response, body) {
         if (!error && response.statusCode == 200) {
           bankInfo = JSON.parse(body);
-          twilio(`The balance of ${bankInfo.nickname} is $${bankInfo.balance}`);
+          
         }
       });
+
+      break;
+    //Example twilio message: b- pair Savings 576f0d970733d0184021f516
+    case 'pair' :
+      console.log(bankCmdArr);
+      var custID = bankCmdArr[bankCmdArr.length - 1];
+      console.log(custID);
+      var options = {
+        uri: `http://api.reimaginebanking.com/customers/${custID}/accounts?key=${keys.reimagine_banking_key}`,
+        method: 'POST',
+        json: {
+          "type": "TESTER",
+          "nickname": "TESTER",
+          "rewards": 0,
+          "balance": 18.32
+        }
+      };
+      //Request pairing doesn't work, isn't important because doesn't actually
+      //do anything concrete
+      var request = require('request');
+      request(options, function (error, response, body) {
+        console.log("CapitalOne account paired");
+      }).end();
       break;
   }
 }
