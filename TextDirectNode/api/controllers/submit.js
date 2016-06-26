@@ -59,7 +59,7 @@ function interpret(cmdArr) {
       case 'W-':
         cmdJSON.w.push(cmd.substring(2).trim());
         break;
-      case 'D-':
+      case 'N-':
         cmdJSON.d.push(cmd.substring(2).trim());
         break;
       case 'H-': // H- prefix sets home/default address
@@ -84,18 +84,18 @@ function interpret(cmdArr) {
 }
 
 // Direction commands get turn-by-turn directions from Google Maps API;
-// "b-" prefix optionally specifies beginning address (home address by default)
-// "e-" prefix optionally specifies end address (by default, the command minus any beginning address strings)
+// "o-" prefix optionally specifies origin address (home address by default)
+// "d-" prefix optionally specifies destination address (by default, the command minus any beginning address strings)
 function getDirections(cmd) {
-  const matchedOrigin = cmd.match(/b-((?!e-).)*/im);
+  const matchedOrigin = cmd.match(/o-((?!d-).)*/im);
 
   if (matchedOrigin) {
     var origin = matchedOrigin[0].substring(2);
-    var matchedDestination = cmd.match(/e-((?!b-).)*/im);
+    var matchedDestination = cmd.match(/d-((?!o-).)*/im);
     var destination = matchedDestination ? matchedDestination[0].substring(2) : cmd.replace(origin, '');
   } else {
     var origin = home;
-    var matchedDestination = cmd.match(/e-((?!b-).)*/im);
+    var matchedDestination = cmd.match(/d-((?!o-).)*/im);
     var destination = matchedDestination ? matchedDestination[0].substring(2) : cmd;
   }
 
