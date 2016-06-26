@@ -77,6 +77,8 @@ function interpret(cmdArr) {
 
   cmdJSON.d.forEach(function(cmd) { getDirections(cmd) });
 
+  cmdJSON.w.forEach(function(cmd) { getWeatherForecast(cmd )});
+
   cmdJSON.b.forEach(function(cmd) {
     bank(cmd);
   });
@@ -186,3 +188,94 @@ function bank(cmd) {
       break;
   }
 }
+
+//Weather stuff (Should be in separate file, but fuck it atm)
+
+
+var http = require('http');
+var accuweather_key = keys.accuweather_key;
+var week = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+var params = {};
+function onErr(err) {
+  console.log(err);
+  return 1;
+}
+function getLocation(response) {
+  var str = '';
+
+  response.on('data', function (chunk) {
+    str += chunk;
+  });
+
+  response.on('end', function () {
+  var locationObject = JSON.parse( str );
+  params.key = locationObject[0]['Key'];
+  var options = {
+    host: 'dataservice.accuweather.com',
+    path: '/forecasts/v1/' + params['forecast'] + '/' + params['type'][params['forecast']] + '/' + params['key'] + '?apikey=' 
+      + accuweather_key
+  };  
+  http.request(options, getForecast).end();
+  });
+}
+
+function getForecast(response) {
+  var str = '';
+  response.on('data', function (chunk) {
+    str += chunk;
+  });
+
+  response.on('end', function () {
+  var forecastObject = JSON.parse( str );
+  var output = '';
+  if (params['forecast'] == 'daily') {
+    for (var i in forecastObject['DailyForecasts']) {
+      var d = new Date(forecastObject['DailyForecasts'][i]['Date']);
+      output += week[d.getDay()] + ': ' 
+        + forecastObject['DailyForecasts'][i]['Day']['IconPhrase'] + '. '
+        + 'High: ' + forecastObject['DailyForecasts'][i]['Temperature']['Maximum']['Value'] + ', '
+        + 'Low: ' + forecastObject['DailyForecasts'][i]['Temperature']['Minimum']['Value'] + '.\n';
+    }
+  } else {
+    for (var i in forecastObject) {
+      var d = new Date(forecastObject[i]['DateTime']);
+      output += d.getHours() + ': ' 
+        + forecastObject[i]['Temperature']['Value'] + ' and ' 
+        + forecastObject[i]['IconPhrase'] + ', ' + forecastObject[i]['PrecipitationProbability'] + '% precip.\n';
+    }
+  }
+  twilio(output);
+  });
+}
+
+
+function getWeatherForecast(cmd) {
+  console.log(cmd);
+  var input = cmd.split(' ');
+  if (input.length >= 3) {
+    params = {
+      forecast: input.shift(),
+      administrative_area: input.pop(),
+      query: input.join('%20'),
+      type: {
+        'daily':'5day',
+        'hourly':'12hour'
+      }   
+    }
+    var options = {
+      host: 'dataservice.accuweather.com',
+      path: '/locations/v1/us/' + params['administrative_area'] + '/search?apikey=' + accuweather_key + '&q=' 
+        + params['query']
+    };
+
+    // console.log(options);
+
+    http.request(options, getLocation).end();
+  } else {
+    onErr(err);
+  }
+
+};
+
+
+
