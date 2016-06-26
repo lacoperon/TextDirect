@@ -54,8 +54,10 @@ let home; // Replace global variable with database of users.
 let shortcuts = {};
 
 function interpret(cmdArr, fromText = true) {
-  if (fromText) {
-    shortcuts.keys.find(function(shortcut) {
+  const shortcutKeys = shortcuts.keys;
+
+  if (fromText && shortcutKeys) {
+    shortcutKeys.find(function(shortcut) {
       cmdArr.forEach(function(cmd) {
         if (cmd.startsWith(shortcut)) {
           cmd.replace(shortcut, shortcuts.shortcut);
@@ -82,9 +84,9 @@ function interpret(cmdArr, fromText = true) {
       case 'B-':
         cmdJSON.b.push(cmd.substring(2).trim())
         break;
-      case '@='
-        const shortcut = cmd.substring(2).trim().split('-');
-        objects.`@${shortcut[0]}-` = shortcut[1];
+      case '@=':
+        const shortcut = cmd.substring(2).trim().split(/-?/);
+        shortcuts[`@${shortcut[0]}`] = shortcut[1];
         break;
       default:
         console.log('unknown command');
