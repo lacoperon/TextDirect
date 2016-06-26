@@ -106,11 +106,9 @@ function getDirections(cmd) {
       if (!error && response.statusCode === 200) {
         const route = JSON.parse(body).routes[0].legs[0];
         const destination = route.end_address;
-        let directions = (route.distance.text + ' (' + route.duration.text +
-          ') from ' + route.start_address + ' to ' + destination + '\n');
+        let directions = route.distance.text + ' (' + route.duration.text + ') from ' + route.start_address + ' to ' + destination + '\n';
         directions = route.steps.map(function(step) {
-          return ('In ' + step.distance.text + ': ' +
-            step.html_instructions.replace(/<\/?b>/g, ''));
+          return 'In ' + step.distance.text + ': ' + step.html_instructions.replace(/<\/?b>/g, '');
         }).join('\n');
         directions += '\nDestination: ' + destination;
         console.log(directions);
