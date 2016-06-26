@@ -72,7 +72,8 @@ function interpret(cmdArr) {
         console.log('unknown command');
     }
   });
-
+  
+  
   cmdJSON.d.forEach(function(cmd) { getDirections(cmd) });
 
   cmdJSON.b.forEach(function(cmd) {
@@ -82,6 +83,23 @@ function interpret(cmdArr) {
   console.log(cmdJSON);
   return "";
 }
+
+//Twilio API integration
+function twilio(messageSent) {
+  var accountSid = 'AC48c3d89ea51e4f0f0406d328c3493118'; 
+  var authToken = 'a9b72418a0183b6b9bbca8731d58fd99'; 
+ 
+//require the Twilio module and create a REST client 
+  var client = require('twilio')(accountSid, authToken); 
+ 
+  client.messages.create({ 
+      to: "7813331368", 
+      from: "+16174407778", 
+      body: messageSent,   
+  }, function(err, message) { 
+      console.log(message.sid); 
+  }); 
+
 
 // Direction commands get turn-by-turn directions from Google Maps API;
 // "o-" prefix optionally specifies origin address (home address by default)
@@ -135,7 +153,7 @@ function bank(cmd) {
       request(`http://api.reimaginebanking.com/accounts/${accountID}?key=${keys.reimagine_banking_key}`, function (error, response, body) {
         if (!error && response.statusCode === 200) {
           bankInfo = JSON.parse(body);
-          console.log(`The balance of ${bankInfo.nickname} is $${bankInfo.balance}`);
+          twilio(`The balance of ${bankInfo.nickname} is $${bankInfo.balance}`);
         }
       });
 
