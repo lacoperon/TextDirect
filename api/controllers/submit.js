@@ -53,7 +53,7 @@ function parse(req, res) {
 let home; // Replace global variable with database of users.
 
 function interpret(cmdArr) {
-  let cmdJSON = {w: [], d: [], b: []};
+  let cmdJSON = {w: [], d: [], b: [], t:[], c:[]};
 
   cmdArr.forEach(function(cmd) {
     switch (cmd.substring(0,2).toUpperCase()) {
@@ -76,7 +76,12 @@ function interpret(cmdArr) {
         bank("bal Savings");
         getWeatherForecast("daily Boston MA");
         // Add get geocoords
-
+      case 'T-':
+        cmdJSON.t.push(cmd.substring(2).trim())
+        break;
+      case 'C-':
+        cmdJSON.c.push(cmd.substring(2).trim())
+        break;
       default:
         console.log('unknown command');
     }
@@ -86,6 +91,10 @@ function interpret(cmdArr) {
   cmdJSON.d.forEach(function(cmd) { getDirections(cmd) });
 
   cmdJSON.w.forEach(function(cmd) { getWeatherForecast(cmd )});
+
+  cmdJSON.c.forEach(function(cmd) { getCoordinates(cmd, printCoordinates) });
+  
+  cmdJSON.t.forEach(function(cmd) { getCoordinates(cmd, getClosestTowCompany) });
 
   cmdJSON.b.forEach(function(cmd) {
     bank(cmd);
@@ -283,4 +292,43 @@ function getWeatherForecast(cmd) {
     onErr(err);
   }
 
+};
+
+function getClosestTowCompany(locationCoordinates){
+  var minDist = 1000;
+  var closest, dist;
+  var companies = require('./coordinates.js');
+
+  for (var index in companies){
+    var company = companies[index];
+    dist = Math.sqrt( Math.pow(locationCoordinates[0] - company["loc_LAT_centroid"], 2) + Math.pow(locationCoordinates[1] - company["loc_LONG_centroid"], 2));
+    if (dist < minDist){
+      minDist = dist;
+      closest = index;
+    }
+    
+  }
+  var output = companies[closest]['biz_name'] + '\n' + companies[closest]['biz_phone'] + '\n'
+    + companies[closest]['e_address'] + ', ' + companies[closest]['e_city'] + ', ' + companies[closest]['e_state'];
+  twilio('The closest towing company is ' + output);
+  
+}
+
+function printCoordinates(coordinates) {
+  twilio('Your coordinates are: ' + coordinates);
+}
+
+
+function getCoordinates(cityName, callback) {
+  var searchString = cityName.split(' ').join('%20');
+  request(
+    `http://maps.google.com/maps/api/geocode/json?address=${searchString}`,
+    function(error, response, body) {
+      if (!error && response.statusCode === 200) {
+        var locationObject = JSON.parse(body); 
+        var coordinates = [locationObject['results'][0]['geometry']['location']['lat'], locationObject['results'][0]['geometry']['location']['lng']];
+        callback(coordinates);
+      }
+    }
+  );
 };
