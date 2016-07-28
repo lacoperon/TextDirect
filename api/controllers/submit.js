@@ -83,7 +83,13 @@ function interpret(cmdArr) {
         cmdJSON.c.push(cmd.substring(2).trim())
         break;
       default:
-        console.log('unknown command');
+        if macros.hasOwnProperty(cmd.substring(0,2).toUpperCase()) {
+          var cmdString = cmd.substring(2).trim();
+          const cmdArrMacro = cmdString.split(';').filter(function(str){
+            return str != '';
+          }).map(function(str) { return str.trim() });
+          interpret(cmdArrMacro);
+        }
     }
   });
 
@@ -93,7 +99,7 @@ function interpret(cmdArr) {
   cmdJSON.w.forEach(function(cmd) { getWeatherForecast(cmd )});
 
   cmdJSON.c.forEach(function(cmd) { getCoordinates(cmd, printCoordinates) });
-  
+
   cmdJSON.t.forEach(function(cmd) { getCoordinates(cmd, getClosestTowCompany) });
 
   cmdJSON.b.forEach(function(cmd) {
@@ -306,18 +312,17 @@ function getClosestTowCompany(locationCoordinates){
       minDist = dist;
       closest = index;
     }
-    
+
   }
   var output = companies[closest]['biz_name'] + '\n' + companies[closest]['biz_phone'] + '\n'
     + companies[closest]['e_address'] + ', ' + companies[closest]['e_city'] + ', ' + companies[closest]['e_state'];
   twilio('The closest towing company is ' + output);
-  
+
 }
 
 function printCoordinates(coordinates) {
   twilio('Your coordinates are: ' + coordinates);
 }
-
 
 function getCoordinates(cityName, callback) {
   var searchString = cityName.split(' ').join('%20');
@@ -325,10 +330,69 @@ function getCoordinates(cityName, callback) {
     `http://maps.google.com/maps/api/geocode/json?address=${searchString}`,
     function(error, response, body) {
       if (!error && response.statusCode === 200) {
-        var locationObject = JSON.parse(body); 
+        var locationObject = JSON.parse(body);
         var coordinates = [locationObject['results'][0]['geometry']['location']['lat'], locationObject['results'][0]['geometry']['location']['lng']];
         callback(coordinates);
       }
     }
   );
 };
+
+var macros = {} //Global Variable for Macros (stand in, not scalable)
+
+function makeMacro(macro) {
+  macros[macro.shortcut] = macro.cmd;
+  addToMacroDB(macro);
+}
+
+function refreshMacros(number) {
+  macros = {};
+  QueryResult = [];
+  //Azure Configuration Settings
+  var config = {
+    userName: '',
+    password: '',
+    server: '',
+    // When you connect to Azure SQL Database, you need these next options.
+    options: {encrypt: true, database: ''}
+  };
+  //Creates New Connection to Database
+  var connection = new Connection(config);
+  connection.on('connect', function(err) {
+    if (err) return console.error(err);
+    console.log("SQLRequest to Macros");
+    executeStatement();
+  });
+
+  //Executes SQL Statement Using Tedious Request
+  //(this is where work will be done in future integrating Swagger)
+  function executeStatement() {
+    var request = new Request(
+      `SELECT * from '' WHERE Number='${number}';`, function(err) {
+      if (err) {
+        console.log(err);
+      }
+    });
+
+    //Each Row Returned is added to the QueryResult response
+    request.on('row', function(columns) {
+      var currentReturn = [];
+      columns.forEach(function(column) {
+        if (column.value === null) {
+          //TODO: SOME THING OR OTHER
+        } else {
+          currentReturn.push(column.value);
+        }
+      });
+      QueryResult.push(currentReturn);
+    });
+    //'doneProc' event is fired when the SQL Server is done returning values
+    request.on('doneProc', function() {
+        QueryResult.forEach(function(cmdLine) {
+          //Adds macro to global variable (not scalable)
+          macros[cmdLine[0]] = cmdLine[1];
+        })
+    });
+    connection.execSql(request);
+  }
+}
