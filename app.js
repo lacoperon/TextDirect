@@ -1,5 +1,7 @@
 'use strict';
 
+//I added a comment ~GitHub Desktop Test~
+
 var SwaggerExpress = require('swagger-express-mw');
 var app = require('express')();
 module.exports = app; // for testing
